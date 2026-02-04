@@ -12,11 +12,12 @@ dependencies:
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
   google_fonts: ^6.1.0
-  shared_preferences: ^2.2.2 # Lưu dữ liệu vào máy
+  shared_preferences: ^2.2.2
+  image_picker: ^1.0.7
+  path_provider: ^2.1.2
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/icon.png
     - assets/chapters/chap1/
-    # Khi Tín thêm thư mục mới (ví dụ chap2), phải khai báo thêm ở đây
