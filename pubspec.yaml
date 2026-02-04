@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Manga Studio Ultimate by Tin.
+description: Manga Studio Pro Max v5 by Tin.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -15,6 +15,7 @@ dependencies:
   shared_preferences: ^2.2.2
   image_picker: ^1.0.7
   path_provider: ^2.1.2
+  flutter_staggered_animations: ^1.0.0 # Thêm hiệu ứng hiện hình ảnh mượt mà
 
 flutter:
   uses-material-design: true
