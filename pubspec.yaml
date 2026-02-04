@@ -1,7 +1,6 @@
 name: my_reading_app
-description: Ung dung doc truyen Manga hien dai cua Tin.
+description: Phien ban Manga Pro Max cua Tin.
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -12,7 +11,8 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
-  google_fonts: ^6.1.0 # Font chu hien dai
+  google_fonts: ^6.1.0
+  shared_preferences: ^2.2.2 # Tinh nang ghi nho trang da doc
 
 dev_dependencies:
   flutter_test:
