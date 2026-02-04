@@ -1,7 +1,6 @@
 name: my_reading_app
-description: Ung dung Manga Studio ProMax cua Tin.
+description: Manga Studio Pro cua Tin.
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -13,8 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
   google_fonts: ^6.1.0
-  shared_preferences: ^2.2.2 # De luu du lieu Manga da tao
-  path_provider: ^2.1.2 # De quan ly duong dan file/thu muc
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
@@ -31,4 +29,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/icon.png
-    - assets/chapters/chap1/ # Giu lai de lam du lieu mau
+    - assets/chapters/chap1/ # Phải có dấu / ở cuối
