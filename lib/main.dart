@@ -1,30 +1,91 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
-import 'package:google_fonts/google_fonts.dart';
 
-void main() => runApp(const MangaStudioApp());
+void main() => runApp(const MangaStudioUltra());
 
-class MangaStudioApp extends StatelessWidget {
-  const MangaStudioApp({super.key});
+class MangaStudioUltra extends StatelessWidget {
+  const MangaStudioUltra({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0D0D0D),
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
         primaryColor: Colors.orangeAccent,
-        colorScheme: const ColorScheme.dark(primary: Colors.orangeAccent),
-        textTheme: GoogleFonts.lexendTextTheme(ThemeData.dark().textTheme),
       ),
       home: const MangaStudioHome(),
     );
   }
 }
 
-class MangaStudioHome extends StatelessWidget {
+class MangaStudioHome extends StatefulWidget {
   const MangaStudioHome({super.key});
+
+  @override
+  State<MangaStudioHome> createState() => _MangaStudioHomeState();
+}
+
+class _MangaStudioHomeState extends State<MangaStudioHome> {
+  // Danh sách truyện thực tế
+  List<Map<String, String>> allManga = [
+    {'title': 'Chapter 1', 'subtitle': 'Hành trình bắt đầu', 'image': 'assets/chapters/chap1/1.jpg'},
+  ];
+
+  // Danh sách hiển thị sau khi lọc
+  List<Map<String, String>> displayedManga = [];
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    displayedManga = allManga; // Mặc định hiện tất cả
+  }
+
+  // Logic Tìm kiếm
+  void _filterManga(String query) {
+    setState(() {
+      displayedManga = allManga
+          .where((manga) => manga['title']!.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  // Logic Thêm Manga Mới
+  void _addNewManga() {
+    TextEditingController titleController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Tạo Manga Mới"),
+        content: TextField(
+          controller: titleController,
+          decoration: const InputDecoration(hintText: "Nhập tên chương..."),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
+          ElevatedButton(
+            onPressed: () {
+              if (titleController.text.isNotEmpty) {
+                setState(() {
+                  allManga.add({
+                    'title': titleController.text,
+                    'subtitle': 'Vừa được tạo',
+                    'image': 'assets/chapters/chap1/1.jpg', // Tạm dùng ảnh cũ làm bìa
+                  });
+                  displayedManga = allManga;
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Tạo"),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,20 +93,25 @@ class MangaStudioHome extends StatelessWidget {
       body: CustomScrollView(
         slivers: [
           SliverAppBar.large(
-            floating: true,
             pinned: true,
-            backgroundColor: const Color(0xFF1A1A1A),
-            title: Text('MANGA STUDIO', 
-              style: GoogleFonts.bebasNeue(letterSpacing: 2, fontSize: 35)),
-            actions: [
-              IconButton(icon: const Icon(Icons.search, size: 28), onPressed: () {}),
-            ],
+            backgroundColor: const Color(0xFF151515),
+            title: Text('MANGA STUDIO', style: GoogleFonts.bebasNeue(letterSpacing: 2, fontSize: 32)),
           ),
+          // Thanh tìm kiếm thông minh
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text("BỘ SƯU TẬP CỦA TÍN", 
-                style: TextStyle(color: Colors.grey[400], fontWeight: FontWeight.bold)),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _filterManga,
+                decoration: InputDecoration(
+                  hintText: "Tìm kiếm truyện...",
+                  prefixIcon: const Icon(Icons.search, color: Colors.orangeAccent),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                ),
+              ),
             ),
           ),
           SliverPadding(
@@ -53,13 +119,13 @@ class MangaStudioHome extends StatelessWidget {
             sliver: SliverGrid(
               gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                mainAxisSpacing: 20,
+                mainAxisSpacing: 15,
                 crossAxisSpacing: 15,
-                childAspectRatio: 0.6,
+                childAspectRatio: 0.7,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildMangaCard(context),
-                childCount: 1, // Tăng lên khi có nhiều truyện
+                (context, index) => _buildMangaCard(displayedManga[index]),
+                childCount: displayedManga.length,
               ),
             ),
           ),
@@ -67,46 +133,32 @@ class MangaStudioHome extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.orangeAccent,
+        onPressed: _addNewManga, // Gọi hàm thêm truyện
         child: const Icon(Icons.add, color: Colors.black, size: 30),
-        onPressed: () {}, // Nơi thêm logic tạo Manga mới
       ),
     );
   }
 
-  Widget _buildMangaCard(BuildContext context) {
+  Widget _buildMangaCard(Map<String, String> manga) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const MangaReader())),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const ReaderScreen())),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: Colors.orange.withOpacity(0.1), blurRadius: 10)],
+          borderRadius: BorderRadius.circular(15),
+          image: DecorationImage(image: AssetImage(manga['image']!), fit: BoxFit.cover),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.8)]),
+          ),
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Image.asset('assets/chapters/chap1/1.jpg', fit: BoxFit.cover,
-                errorBuilder: (context, e, s) => Container(color: Colors.grey[900])),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withOpacity(0.9)],
-                  ),
-                ),
-              ),
-              const Positioned(
-                bottom: 12, left: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('CHAPTER 1', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-                    Text('Hành trình bắt đầu', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  ],
-                ),
-              ),
+              Text(manga['title']!, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orangeAccent)),
+              Text(manga['subtitle']!, style: const TextStyle(fontSize: 12, color: Colors.white70)),
             ],
           ),
         ),
@@ -115,36 +167,19 @@ class MangaStudioHome extends StatelessWidget {
   }
 }
 
-class MangaReader extends StatefulWidget {
-  const MangaReader({super.key});
-  @override
-  State<MangaReader> createState() => _MangaReaderState();
-}
-
-class _MangaReaderState extends State<MangaReader> {
-  int currentPage = 1;
-  final int totalPages = 10; // Thay đổi theo số lượng ảnh thực tế của Tín
-
+class ReaderScreen extends StatelessWidget {
+  const ReaderScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.black26,
-        elevation: 0,
-        title: Text("$currentPage / $totalPages", style: const TextStyle(fontSize: 16)),
-      ),
       body: PhotoViewGallery.builder(
-        itemCount: totalPages,
-        onPageChanged: (index) => setState(() => currentPage = index + 1),
+        itemCount: 10,
         builder: (context, index) => PhotoViewGalleryPageOptions(
           imageProvider: AssetImage('assets/chapters/chap1/${index + 1}.jpg'),
           initialScale: PhotoViewComputedScale.contained,
-          minScale: PhotoViewComputedScale.contained,
-          maxScale: PhotoViewComputedScale.covered * 2.5,
         ),
-        scrollDirection: Axis.vertical, // Cuộn dọc phong cách Webtoon
+        scrollDirection: Axis.vertical,
       ),
     );
   }
