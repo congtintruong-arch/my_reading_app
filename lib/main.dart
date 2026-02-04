@@ -8,17 +8,17 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'dart:convert';
 import 'dart:io';
 
-void main() => runApp(const MangaStudioV5());
+void main() => runApp(const MangaStudioV6());
 
-class MangaStudioV5 extends StatelessWidget {
-  const MangaStudioV5({super.key});
+class MangaStudioV6 extends StatelessWidget {
+  const MangaStudioV6({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF08080A),
-        primaryColor: const Color(0xFFFF4D00),
+        scaffoldBackgroundColor: const Color(0xFF050507),
+        primaryColor: Colors.cyanAccent,
       ),
       home: const HomeScreen(),
     );
@@ -43,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadManga() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('manga_storage_v5');
+    final String? data = prefs.getString('manga_storage_v6');
     if (data != null) {
       setState(() => _mangaList = List<Map<String, dynamic>>.from(json.decode(data)));
     }
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveManga() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('manga_storage_v5', json.encode(_mangaList));
+    await prefs.setString('manga_storage_v6', json.encode(_mangaList));
   }
 
   Future<void> _pickImages() async {
@@ -61,31 +61,33 @@ class _HomeScreenState extends State<HomeScreen> {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1D),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: const Text("Tên Bộ Truyện"),
+          backgroundColor: const Color(0xFF121214),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.cyanAccent, width: 0.5)),
+          title: const Text("Khởi tạo Manga mới"),
           content: TextField(
             controller: nameController,
-            decoration: const InputDecoration(hintText: "Nhập tên truyện...", focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.orange))),
+            autofocus: true,
+            decoration: const InputDecoration(hintText: "Tên tác phẩm...", hintStyle: TextStyle(color: Colors.white24)),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent),
               onPressed: () {
                 if (nameController.text.isNotEmpty) {
                   setState(() {
                     _mangaList.insert(0, {
+                      'id': DateTime.now().millisecondsSinceEpoch.toString(),
                       'title': nameController.text,
                       'imagePaths': pickedFiles.map((e) => e.path).toList(),
-                      'isFavorite': false,
+                      'lastPage': 0, // Lưu vị trí trang đang đọc
                     });
                   });
                   _saveManga();
                   Navigator.pop(context);
                 }
               },
-              child: const Text("Lưu"),
+              child: const Text("Tạo", style: TextStyle(color: Colors.black)),
             ),
           ],
         ),
@@ -95,91 +97,115 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredList = _mangaList.where((m) => m['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
+    final filtered = _mangaList.where((m) => m['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar.large(
-            expandedHeight: 150,
-            backgroundColor: const Color(0xFF08080A),
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text('MANGA STUDIO', style: GoogleFonts.bebasNeue(letterSpacing: 3, fontSize: 32, color: Colors.orange)),
-              centerTitle: true,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF050507), Color(0xFF101018)]),
+        ),
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar.large(
+              expandedHeight: 140,
+              backgroundColor: Colors.transparent,
+              flexibleSpace: FlexibleSpaceBar(
+                title: Text('MANGA STUDIO', style: GoogleFonts.syncopate(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.cyanAccent)),
+                centerTitle: true,
+              ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
-                decoration: InputDecoration(
-                  hintText: "Tìm kiếm truyện của Tín...",
-                  prefixIcon: const Icon(Icons.search, color: Colors.orange),
-                  filled: true,
-                  fillColor: const Color(0xFF1A1A1D),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Container(
+                  decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.cyanAccent.withOpacity(0.1), blurRadius: 20)]),
+                  child: TextField(
+                    onChanged: (v) => setState(() => _searchQuery = v),
+                    decoration: InputDecoration(
+                      hintText: "Tìm truyện của Tín...",
+                      prefixIcon: const Icon(Icons.search_rounded, color: Colors.cyanAccent),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: AnimationLimiter(
-              child: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.65, mainAxisSpacing: 16, crossAxisSpacing: 16),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final manga = filteredList[index];
-                    return AnimationConfiguration.staggeredGrid(
-                      position: index,
-                      duration: const Duration(milliseconds: 500),
-                      columnCount: 2,
-                      child: ScaleAnimation(
-                        child: FadeInAnimation(
-                          child: _buildGlassCard(manga, index),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: AnimationLimiter(
+                child: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.68, mainAxisSpacing: 20, crossAxisSpacing: 20),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final manga = filtered[index];
+                      return AnimationConfiguration.staggeredGrid(
+                        position: index,
+                        duration: const Duration(milliseconds: 600),
+                        columnCount: 2,
+                        child: SlideAnimation(
+                          verticalOffset: 50,
+                          child: FadeInAnimation(child: _buildNeonCard(manga, index)),
                         ),
-                      ),
-                    );
-                  },
-                  childCount: filteredList.length,
+                      );
+                    },
+                    childCount: filtered.length,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _pickImages,
-        backgroundColor: Colors.orange,
-        icon: const Icon(Icons.add_a_photo, color: Colors.white),
-        label: const Text("Thêm Truyện"),
+        backgroundColor: Colors.cyanAccent,
+        icon: const Icon(Icons.auto_stories, color: Colors.black),
+        label: const Text("Tạo Chapter", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
     );
   }
 
-  Widget _buildGlassCard(Map<String, dynamic> manga, int index) {
+  Widget _buildNeonCard(Map<String, dynamic> manga, int index) {
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderScreen(title: manga['title'], images: List<String>.from(manga['imagePaths'])))),
-      onLongPress: () => _confirmDelete(index),
+      onTap: () async {
+        await Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderScreen(manga: manga)));
+        _loadManga(); // Tải lại để cập nhật trang cuối
+      },
+      onLongPress: () => _deleteManga(index),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          image: DecorationImage(image: FileImage(File(manga['imagePaths'][0])), fit: BoxFit.cover),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Text(manga['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
-              const SizedBox(height: 4),
-              Text("${manga['imagePaths'].length} trang", style: const TextStyle(color: Colors.orange, fontSize: 12)),
+              Image.file(File(manga['imagePaths'][0]), fit: BoxFit.cover),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
+                ),
+              ),
+              Positioned(
+                bottom: 12, left: 12, right: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(manga['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 5),
+                    LinearProgressIndicator(
+                      value: (manga['lastPage'] + 1) / manga['imagePaths'].length,
+                      backgroundColor: Colors.white12,
+                      valueColor: const AlwaysStoppedAnimation(Colors.cyanAccent),
+                      minHeight: 2,
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -187,11 +213,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _confirmDelete(int index) {
+  void _deleteManga(int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Xóa truyện?"),
+        title: const Text("Xóa Manga này?"),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
           TextButton(onPressed: () { setState(() => _mangaList.removeAt(index)); _saveManga(); Navigator.pop(context); }, child: const Text("Xóa", style: TextStyle(color: Colors.red))),
@@ -202,29 +228,57 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class ReaderScreen extends StatefulWidget {
-  final String title;
-  final List<String> images;
-  const ReaderScreen({super.key, required this.title, required this.images});
+  final Map<String, dynamic> manga;
+  const ReaderScreen({super.key, required this.manga});
   @override
   State<ReaderScreen> createState() => _ReaderScreenState();
 }
 
 class _ReaderScreenState extends State<ReaderScreen> {
-  int _currentPage = 1;
+  late PageController _controller;
+  late int _currentPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPage = widget.manga['lastPage'] ?? 0;
+    _controller = PageController(initialPage: _currentPage);
+  }
+
+  void _updateProgress(int page) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? data = prefs.getString('manga_storage_v6');
+    if (data != null) {
+      List<Map<String, dynamic>> list = List<Map<String, dynamic>>.from(json.decode(data));
+      for (var m in list) {
+        if (m['id'] == widget.manga['id']) {
+          m['lastPage'] = page;
+          break;
+        }
+      }
+      await prefs.setString('manga_storage_v6', json.encode(list));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    List<String> images = List<String>.from(widget.manga['imagePaths']);
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.black54,
-        title: Text(widget.title, style: const TextStyle(fontSize: 16)),
-        actions: [Center(child: Padding(padding: const EdgeInsets.only(right: 20), child: Text("$_currentPage/${widget.images.length}")))],
+        backgroundColor: Colors.transparent,
+        title: Text(widget.manga['title'], style: const TextStyle(fontSize: 14)),
+        actions: [Center(child: Padding(padding: const EdgeInsets.only(right: 20), child: Text("${_currentPage + 1}/${images.length}", style: const TextStyle(color: Colors.cyanAccent))))],
       ),
       body: PhotoViewGallery.builder(
-        itemCount: widget.images.length,
-        onPageChanged: (i) => setState(() => _currentPage = i + 1),
+        itemCount: images.length,
+        pageController: _controller,
+        onPageChanged: (i) {
+          setState(() => _currentPage = i);
+          _updateProgress(i);
+        },
         builder: (context, index) => PhotoViewGalleryPageOptions(
-          imageProvider: FileImage(File(widget.images[index])),
+          imageProvider: FileImage(File(images[index])),
           initialScale: PhotoViewComputedScale.contained,
         ),
         scrollDirection: Axis.vertical,
