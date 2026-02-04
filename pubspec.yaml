@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Ứng dụng đọc truyện tranh Offline của Tín.
+description: Ung dung doc truyen Manga hien dai cua Tin.
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -12,12 +12,11 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
-  cached_network_image: ^3.3.1 
+  google_fonts: ^6.1.0 # Font chu hien dai
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
   flutter_launcher_icons: ^0.13.1 
 
 flutter_launcher_icons:
@@ -28,7 +27,6 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-
   assets:
     - assets/images/icon.png
-    - assets/chapters/chap1/ # Khai báo toàn bộ thư mục ảnh truyện
+    - assets/chapters/chap1/
