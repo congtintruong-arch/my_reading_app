@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Manga Studio Pro cua Tin.
+description: Manga Studio Ultimate by Tin.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,21 +12,11 @@ dependencies:
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
   google_fonts: ^6.1.0
-  shared_preferences: ^2.2.2
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_launcher_icons: ^0.13.1 
-
-flutter_launcher_icons:
-  android: true
-  ios: true
-  image_path: "assets/images/icon.png"
-  remove_alpha_ios: true
+  shared_preferences: ^2.2.2 # Lưu dữ liệu vào máy
 
 flutter:
   uses-material-design: true
   assets:
     - assets/images/icon.png
-    - assets/chapters/chap1/ # Phải có dấu / ở cuối
+    - assets/chapters/chap1/
+    # Khi Tín thêm thư mục mới (ví dụ chap2), phải khai báo thêm ở đây

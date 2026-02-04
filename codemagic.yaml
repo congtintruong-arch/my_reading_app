@@ -1,16 +1,11 @@
 workflows:
   default-workflow:
-    name: Manga Studio Pro Build
+    name: Manga Studio Final
     instance_type: mac_mini_m2
-    max_build_duration: 60
     scripts:
-      - name: Install dependencies
-        script: flutter pub get
-      - name: Build iOS
-        script: flutter build ios --release --no-codesign
+      - name: Build App
+        script: | 
+          flutter pub get
+          flutter build ios --release --no-codesign
     artifacts:
-      - build/ios/iphoneos/*.app
-    publishing:
-      email:
-        recipients:
-          - congtintruong@gmail.com # Email của bạn để nhận thông báo build xong
+      - build/ios/iphoneos/Runner.app
