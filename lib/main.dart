@@ -1,46 +1,107 @@
 import 'package:flutter/material.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
-void main() => runApp(MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: ReaderScreen(),
-    ));
-
-class ReaderScreen extends StatefulWidget {
-  @override
-  _ReaderScreenState createState() => _ReaderScreenState();
+void main() {
+  runApp(const MangaApp());
 }
 
-class _ReaderScreenState extends State<ReaderScreen> {
-  double _fontSize = 18.0;
-  bool _isDarkMode = false;
+class MangaApp extends StatelessWidget {
+  const MangaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Thay đổi màu nền dựa trên chế độ sáng/tối
-      backgroundColor: _isDarkMode ? Color(0xFF1A1A1A) : Color(0xFFF5F5DC),
-      appBar: AppBar(
-        title: Text("App Đọc Truyện Offline"),
-        backgroundColor: Colors.brown,
-        actions: [
-          IconButton(icon: Icon(Icons.remove), onPressed: () => setState(() => _fontSize -= 2)),
-          IconButton(icon: Icon(Icons.add), onPressed: () => setState(() => _fontSize += 2)),
-          IconButton(
-            icon: Icon(_isDarkMode ? Icons.wb_sunny : Icons.nightlight_round),
-            onPressed: () => setState(() => _isDarkMode = !_isDarkMode),
-          ),
-        ],
+    return MaterialApp(
+      title: 'Manga Reader',
+      theme: ThemeData(
+        brightness: Brightness.dark, // Giao diện tối giúp đọc truyện thoải mái hơn
+        primarySwatch: Colors.deepOrange,
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Text(
-          "CHƯƠNG 1: KHỞI ĐẦU\n\nĐây là nội dung truyện của bạn. Khi bạn cài app này lên iPhone, bạn có thể vuốt để đọc rất mượt mà. Flutter giúp chúng ta tạo ra giao diện đẹp mắt chỉ với vài dòng code.\n\n" * 10,
-          style: TextStyle(
-            fontSize: _fontSize,
-            color: _isDarkMode ? Colors.white70 : Colors.black87,
-            height: 1.6, // Khoảng cách giữa các dòng
-          ),
+      home: const MangaHomeScreen(),
+    );
+  }
+}
+
+// Màn hình danh sách truyện
+class MangaHomeScreen extends StatelessWidget {
+  const MangaHomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Dữ liệu mẫu: Bạn có thể thay link ảnh bìa ở đây
+    final List<String> mangaCovers = [
+      'https://m.media-amazon.com/images/I/8125bd7m89L.jpg',
+      'https://m.media-amazon.com/images/I/91SrnW8z7pL.jpg',
+    ];
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Truyện Tranh Của Tín')),
+      body: GridView.builder(
+        padding: const EdgeInsets.all(10),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, // Hiện 2 cột
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          childAspectRatio: 0.7,
         ),
+        itemCount: mangaCovers.length,
+        itemBuilder: (context, index) {
+          return GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MangaReaderScreen()),
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: CachedNetworkImage(
+                imageUrl: mangaCovers[index],
+                fit: BoxFit.cover,
+                placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                errorWidget: (context, url, error) => const Icon(Icons.error),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Màn hình đọc truyện (Viewer)
+class MangaReaderScreen extends StatelessWidget {
+  const MangaReaderScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // Danh sách link các trang truyện mẫu
+    final List<String> pages = [
+      'https://images.unsplash.com/photo-1618336753974-aae8e04506aa?q=80&w=1000&auto=format&fit=crop',
+      'https://images.unsplash.com/photo-1614850523296-d8c1af93d400?q=80&w=1000&auto=format&fit=crop',
+    ];
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Đang đọc...'),
+      ),
+      body: PhotoViewGallery.builder(
+        itemCount: pages.length,
+        builder: (context, index) {
+          return PhotoViewGalleryPageOptions(
+            imageProvider: CachedNetworkImageProvider(pages[index]),
+            initialScale: PhotoViewComputedScale.contained,
+            minScale: PhotoViewComputedScale.contained * 0.8,
+            maxScale: PhotoViewComputedScale.covered * 2,
+            heroAttributes: PhotoViewHeroAttributes(tag: index),
+          );
+        },
+        scrollDirection: Axis.horizontal, // Vuốt ngang để sang trang
+        loadingBuilder: (context, event) => const Center(child: CircularProgressIndicator()),
       ),
     );
   }
