@@ -2,286 +2,186 @@ import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'dart:convert';
-import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:html/parser.dart' show parse;
 
-void main() => runApp(const MangaStudioV6());
+void main() => runApp(const MangaStudioV8());
 
-class MangaStudioV6 extends StatelessWidget {
-  const MangaStudioV6({super.key});
+class MangaStudioV8 extends StatelessWidget {
+  const MangaStudioV8({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF050507),
-        primaryColor: Colors.cyanAccent,
+        scaffoldBackgroundColor: const Color(0xFF0F1014),
+        primaryColor: Colors.orangeAccent,
       ),
-      home: const HomeScreen(),
+      home: const ConnectScreen(),
     );
   }
 }
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class ConnectScreen extends StatefulWidget {
+  const ConnectScreen({super.key});
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<ConnectScreen> createState() => _ConnectScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  List<Map<String, dynamic>> _mangaList = [];
-  String _searchQuery = "";
+class _ConnectScreenState extends State<ConnectScreen> {
+  final _ipController = TextEditingController(text: "192.168.1.");
 
-  @override
-  void initState() {
-    super.initState();
-    _loadManga();
-  }
-
-  Future<void> _loadManga() async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('manga_storage_v6');
-    if (data != null) {
-      setState(() => _mangaList = List<Map<String, dynamic>>.from(json.decode(data)));
-    }
-  }
-
-  Future<void> _saveManga() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('manga_storage_v6', json.encode(_mangaList));
-  }
-
-  Future<void> _pickImages() async {
-    final List<XFile> pickedFiles = await ImagePicker().pickMultiImage();
-    if (pickedFiles.isNotEmpty) {
-      TextEditingController nameController = TextEditingController();
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF121214),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Colors.cyanAccent, width: 0.5)),
-          title: const Text("Khởi tạo Manga mới"),
-          content: TextField(
-            controller: nameController,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: "Tên tác phẩm...", hintStyle: TextStyle(color: Colors.white24)),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent),
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  setState(() {
-                    _mangaList.insert(0, {
-                      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-                      'title': nameController.text,
-                      'imagePaths': pickedFiles.map((e) => e.path).toList(),
-                      'lastPage': 0, // Lưu vị trí trang đang đọc
-                    });
-                  });
-                  _saveManga();
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Tạo", style: TextStyle(color: Colors.black)),
-            ),
-          ],
-        ),
-      );
+  void _connect() {
+    if (_ipController.text.isNotEmpty) {
+      Navigator.push(context, MaterialPageRoute(
+        builder: (context) => MangaBrowser(ip: _ipController.text),
+      ));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _mangaList.where((m) => m['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase())).toList();
-
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Color(0xFF050507), Color(0xFF101018)]),
-        ),
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar.large(
-              expandedHeight: 140,
-              backgroundColor: Colors.transparent,
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text('MANGA STUDIO', style: GoogleFonts.syncopate(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.cyanAccent)),
-                centerTitle: true,
+        padding: const EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_sync, size: 100, color: Colors.orangeAccent),
+            const SizedBox(height: 20),
+            Text("MANGA CLOUD", style: GoogleFonts.bebasNeue(fontSize: 40, letterSpacing: 4)),
+            const SizedBox(height: 40),
+            TextField(
+              controller: _ipController,
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: "Nhập IP PC (VD: 192.168.1.5:8080)",
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Container(
-                  decoration: BoxDecoration(boxShadow: [BoxShadow(color: Colors.cyanAccent.withOpacity(0.1), blurRadius: 20)]),
-                  child: TextField(
-                    onChanged: (v) => setState(() => _searchQuery = v),
-                    decoration: InputDecoration(
-                      hintText: "Tìm truyện của Tín...",
-                      prefixIcon: const Icon(Icons.search_rounded, color: Colors.cyanAccent),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
-                    ),
-                  ),
-                ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orangeAccent,
+                minimumSize: const Size(double.infinity, 55),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: AnimationLimiter(
-                child: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.68, mainAxisSpacing: 20, crossAxisSpacing: 20),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final manga = filtered[index];
-                      return AnimationConfiguration.staggeredGrid(
-                        position: index,
-                        duration: const Duration(milliseconds: 600),
-                        columnCount: 2,
-                        child: SlideAnimation(
-                          verticalOffset: 50,
-                          child: FadeInAnimation(child: _buildNeonCard(manga, index)),
-                        ),
-                      );
-                    },
-                    childCount: filtered.length,
-                  ),
-                ),
-              ),
+              onPressed: _connect,
+              child: const Text("KẾT NỐI HFS PC", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _pickImages,
-        backgroundColor: Colors.cyanAccent,
-        icon: const Icon(Icons.auto_stories, color: Colors.black),
-        label: const Text("Tạo Chapter", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-
-  Widget _buildNeonCard(Map<String, dynamic> manga, int index) {
-    return GestureDetector(
-      onTap: () async {
-        await Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderScreen(manga: manga)));
-        _loadManga(); // Tải lại để cập nhật trang cuối
-      },
-      onLongPress: () => _deleteManga(index),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.file(File(manga['imagePaths'][0]), fit: BoxFit.cover),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.black.withOpacity(0.9)]),
-                ),
-              ),
-              Positioned(
-                bottom: 12, left: 12, right: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(manga['title'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 5),
-                    LinearProgressIndicator(
-                      value: (manga['lastPage'] + 1) / manga['imagePaths'].length,
-                      backgroundColor: Colors.white12,
-                      valueColor: const AlwaysStoppedAnimation(Colors.cyanAccent),
-                      minHeight: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _deleteManga(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Xóa Manga này?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
-          TextButton(onPressed: () { setState(() => _mangaList.removeAt(index)); _saveManga(); Navigator.pop(context); }, child: const Text("Xóa", style: TextStyle(color: Colors.red))),
-        ],
-      ),
     );
   }
 }
 
-class ReaderScreen extends StatefulWidget {
-  final Map<String, dynamic> manga;
-  const ReaderScreen({super.key, required this.manga});
+class MangaBrowser extends StatefulWidget {
+  final String ip;
+  const MangaBrowser({super.key, required this.ip});
   @override
-  State<ReaderScreen> createState() => _ReaderScreenState();
+  State<MangaBrowser> createState() => _MangaBrowserState();
 }
 
-class _ReaderScreenState extends State<ReaderScreen> {
-  late PageController _controller;
-  late int _currentPage;
+class _MangaBrowserState extends State<MangaBrowser> {
+  List<String> _folders = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _currentPage = widget.manga['lastPage'] ?? 0;
-    _controller = PageController(initialPage: _currentPage);
+    _fetchFolders();
   }
 
-  void _updateProgress(int page) async {
-    final prefs = await SharedPreferences.getInstance();
-    final String? data = prefs.getString('manga_storage_v6');
-    if (data != null) {
-      List<Map<String, dynamic>> list = List<Map<String, dynamic>>.from(json.decode(data));
-      for (var m in list) {
-        if (m['id'] == widget.manga['id']) {
-          m['lastPage'] = page;
-          break;
-        }
+  Future<void> _fetchFolders() async {
+    try {
+      final url = widget.ip.startsWith('http') ? widget.ip : 'http://${widget.ip}';
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        var document = parse(response.body);
+        var links = document.querySelectorAll('a');
+        setState(() {
+          _folders = links
+              .map((link) => link.attributes['href'] ?? "")
+              .where((s) => s.isNotEmpty && s != "/" && !s.contains("?"))
+              .toList();
+          _loading = false;
+        });
       }
-      await prefs.setString('manga_storage_v6', json.encode(list));
+    } catch (e) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Không tìm thấy Server PC!")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    List<String> images = List<String>.from(widget.manga['imagePaths']);
+    return Scaffold(
+      appBar: AppBar(title: const Text("THƯ MỤC TRUYỆN"), backgroundColor: Colors.transparent),
+      body: _loading 
+        ? const Center(child: CircularProgressIndicator(color: Colors.orangeAccent))
+        : ListView.separated(
+            padding: const EdgeInsets.all(15),
+            itemCount: _folders.length,
+            separatorBuilder: (context, index) => const Divider(color: Colors.white10),
+            itemBuilder: (context, index) => ListTile(
+              leading: const Icon(Icons.folder, color: Colors.orangeAccent),
+              title: Text(_folders[index].replaceAll("/", ""), style: const TextStyle(fontSize: 16)),
+              onTap: () => Navigator.push(context, MaterialPageRoute(
+                builder: (context) => ReaderPage(ip: widget.ip, folder: _folders[index]),
+              )),
+            ),
+          ),
+    );
+  }
+}
+
+class ReaderPage extends StatefulWidget {
+  final String ip, folder;
+  const ReaderPage({super.key, required this.ip, required this.folder});
+  @override
+  State<ReaderPage> createState() => _ReaderPageState();
+}
+
+class _ReaderPageState extends State<ReaderPage> {
+  int _current = 1;
+
+  Future<List<String>> _getImages() async {
+    final baseUrl = widget.ip.startsWith('http') ? widget.ip : 'http://${widget.ip}';
+    final response = await http.get(Uri.parse('$baseUrl/${widget.folder}'));
+    var document = parse(response.body);
+    var links = document.querySelectorAll('a');
+    return links
+        .map((link) => link.attributes['href'] ?? "")
+        .where((s) => s.toLowerCase().endsWith('.jpg') || s.toLowerCase().endsWith('.png'))
+        .map((s) => '$baseUrl/${widget.folder}$s')
+        .toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: Text(widget.manga['title'], style: const TextStyle(fontSize: 14)),
-        actions: [Center(child: Padding(padding: const EdgeInsets.only(right: 20), child: Text("${_currentPage + 1}/${images.length}", style: const TextStyle(color: Colors.cyanAccent))))],
+        backgroundColor: Colors.black54,
+        title: Text("${widget.folder.replaceAll("/", "")} ($_current)"),
       ),
-      body: PhotoViewGallery.builder(
-        itemCount: images.length,
-        pageController: _controller,
-        onPageChanged: (i) {
-          setState(() => _currentPage = i);
-          _updateProgress(i);
+      body: FutureBuilder<List<String>>(
+        future: _getImages(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+          return PhotoViewGallery.builder(
+            itemCount: snapshot.data!.length,
+            onPageChanged: (index) => setState(() => _current = index + 1),
+            builder: (context, index) => PhotoViewGalleryPageOptions(
+              imageProvider: NetworkImage(snapshot.data![index]),
+              initialScale: PhotoViewComputedScale.contained,
+            ),
+            scrollDirection: Axis.vertical,
+          );
         },
-        builder: (context, index) => PhotoViewGalleryPageOptions(
-          imageProvider: FileImage(File(images[index])),
-          initialScale: PhotoViewComputedScale.contained,
-        ),
-        scrollDirection: Axis.vertical,
       ),
     );
   }
