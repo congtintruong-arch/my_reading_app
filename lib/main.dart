@@ -5,17 +5,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 
-void main() => runApp(const MangaStudioV8());
+void main() => runApp(const MangaStudioV11());
 
-class MangaStudioV8 extends StatelessWidget {
-  const MangaStudioV8({super.key});
+class MangaStudioV11 extends StatelessWidget {
+  const MangaStudioV11({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0F1014),
-        primaryColor: Colors.orangeAccent,
+        scaffoldBackgroundColor: const Color(0xFF0D0D0F),
+        primaryColor: Colors.amberAccent,
       ),
       home: const ConnectScreen(),
     );
@@ -31,47 +31,62 @@ class ConnectScreen extends StatefulWidget {
 class _ConnectScreenState extends State<ConnectScreen> {
   final _ipController = TextEditingController(text: "192.168.1.");
 
-  void _connect() {
-    if (_ipController.text.isNotEmpty) {
-      Navigator.push(context, MaterialPageRoute(
-        builder: (context) => MangaBrowser(ip: _ipController.text),
-      ));
+  void _connect() async {
+    String url = _ipController.text.trim();
+    if (url.isEmpty) return;
+    if (!url.startsWith('http')) url = 'http://$url';
+
+    // Thử ping server trước khi chuyển màn hình
+    try {
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => MangaBrowser(baseUrl: url),
+        ));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lỗi kết nối: Hãy kiểm tra IP và Firewall trên PC!\n($e)")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        padding: const EdgeInsets.all(30),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.cloud_sync, size: 100, color: Colors.orangeAccent),
-            const SizedBox(height: 20),
-            Text("MANGA CLOUD", style: GoogleFonts.bebasNeue(fontSize: 40, letterSpacing: 4)),
-            const SizedBox(height: 40),
-            TextField(
-              controller: _ipController,
-              textAlign: TextAlign.center,
-              decoration: InputDecoration(
-                hintText: "Nhập IP PC (VD: 192.168.1.5:8080)",
-                filled: true,
-                fillColor: Colors.white10,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off_sharp, size: 80, color: Colors.amberAccent),
+              const SizedBox(height: 20),
+              Text("MANGA CLOUD V11", style: GoogleFonts.oswald(fontSize: 30, letterSpacing: 2)),
+              const SizedBox(height: 40),
+              TextField(
+                controller: _ipController,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  hintText: "VD: 192.168.1.15:8080",
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orangeAccent,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amberAccent,
+                  minimumSize: const Size(double.infinity, 55),
+                ),
+                onPressed: _connect,
+                child: const Text("KIỂM TRA & KẾT NỐI", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
-              onPressed: _connect,
-              child: const Text("KẾT NỐI HFS PC", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -79,8 +94,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
 }
 
 class MangaBrowser extends StatefulWidget {
-  final String ip;
-  const MangaBrowser({super.key, required this.ip});
+  final String baseUrl;
+  const MangaBrowser({super.key, required this.baseUrl});
   @override
   State<MangaBrowser> createState() => _MangaBrowserState();
 }
@@ -92,71 +107,57 @@ class _MangaBrowserState extends State<MangaBrowser> {
   @override
   void initState() {
     super.initState();
-    _fetchFolders();
+    _fetch();
   }
 
-  Future<void> _fetchFolders() async {
+  Future<void> _fetch() async {
     try {
-      final url = widget.ip.startsWith('http') ? widget.ip : 'http://${widget.ip}';
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        var document = parse(response.body);
-        var links = document.querySelectorAll('a');
-        setState(() {
-          _folders = links
-              .map((link) => link.attributes['href'] ?? "")
-              .where((s) => s.isNotEmpty && s != "/" && !s.contains("?"))
-              .toList();
-          _loading = false;
-        });
-      }
+      final response = await http.get(Uri.parse(widget.baseUrl));
+      var doc = parse(response.body);
+      var links = doc.querySelectorAll('a');
+      setState(() {
+        _folders = links
+            .map((l) => l.attributes['href'] ?? "")
+            .where((s) => s.isNotEmpty && s != "/" && !s.contains("?"))
+            .toList();
+        _loading = false;
+      });
     } catch (e) {
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Không tìm thấy Server PC!")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("THƯ MỤC TRUYỆN"), backgroundColor: Colors.transparent),
+      appBar: AppBar(title: const Text("THƯ MỤC TRUYỆN")),
       body: _loading 
-        ? const Center(child: CircularProgressIndicator(color: Colors.orangeAccent))
-        : ListView.separated(
-            padding: const EdgeInsets.all(15),
-            itemCount: _folders.length,
-            separatorBuilder: (context, index) => const Divider(color: Colors.white10),
-            itemBuilder: (context, index) => ListTile(
-              leading: const Icon(Icons.folder, color: Colors.orangeAccent),
-              title: Text(_folders[index].replaceAll("/", ""), style: const TextStyle(fontSize: 16)),
-              onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (context) => ReaderPage(ip: widget.ip, folder: _folders[index]),
-              )),
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _folders.length,
+              itemBuilder: (context, index) => ListTile(
+                leading: const Icon(Icons.folder, color: Colors.amberAccent),
+                title: Text(Uri.decodeComponent(_folders[index])),
+                onTap: () => Navigator.push(context, MaterialPageRoute(
+                  builder: (context) => Reader(baseUrl: widget.baseUrl, folder: _folders[index]),
+                )),
+              ),
             ),
-          ),
     );
   }
 }
 
-class ReaderPage extends StatefulWidget {
-  final String ip, folder;
-  const ReaderPage({super.key, required this.ip, required this.folder});
-  @override
-  State<ReaderPage> createState() => _ReaderPageState();
-}
-
-class _ReaderPageState extends State<ReaderPage> {
-  int _current = 1;
+class Reader extends StatelessWidget {
+  final String baseUrl, folder;
+  const Reader({super.key, required this.baseUrl, required this.folder});
 
   Future<List<String>> _getImages() async {
-    final baseUrl = widget.ip.startsWith('http') ? widget.ip : 'http://${widget.ip}';
-    final response = await http.get(Uri.parse('$baseUrl/${widget.folder}'));
-    var document = parse(response.body);
-    var links = document.querySelectorAll('a');
-    return links
-        .map((link) => link.attributes['href'] ?? "")
+    final response = await http.get(Uri.parse('$baseUrl/$folder'));
+    var doc = parse(response.body);
+    return doc.querySelectorAll('a')
+        .map((l) => l.attributes['href'] ?? "")
         .where((s) => s.toLowerCase().endsWith('.jpg') || s.toLowerCase().endsWith('.png'))
-        .map((s) => '$baseUrl/${widget.folder}$s')
+        .map((s) => '$baseUrl/$folder$s')
         .toList();
   }
 
@@ -164,17 +165,13 @@ class _ReaderPageState extends State<ReaderPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black54,
-        title: Text("${widget.folder.replaceAll("/", "")} ($_current)"),
-      ),
+      appBar: AppBar(title: const Text("ĐANG ĐỌC")),
       body: FutureBuilder<List<String>>(
         future: _getImages(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
           return PhotoViewGallery.builder(
             itemCount: snapshot.data!.length,
-            onPageChanged: (index) => setState(() => _current = index + 1),
             builder: (context, index) => PhotoViewGalleryPageOptions(
               imageProvider: NetworkImage(snapshot.data![index]),
               initialScale: PhotoViewComputedScale.contained,
