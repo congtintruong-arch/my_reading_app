@@ -7,10 +7,10 @@ import 'package:html/parser.dart' show parse;
 import 'package:archive/archive.dart';
 import 'dart:typed_data';
 
-void main() => runApp(const MangaStudioV22());
+void main() => runApp(const MangaStudioV23());
 
-class MangaStudioV22 extends StatelessWidget {
-  const MangaStudioV22({super.key});
+class MangaStudioV23 extends StatelessWidget {
+  const MangaStudioV23({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -31,7 +31,7 @@ class ConnectScreen extends StatefulWidget {
 }
 
 class _ConnectScreenState extends State<ConnectScreen> {
-  // IP lấy từ hình ảnh HFS của bạn
+  // IP lấy từ cấu hình HFS của bạn
   final _ipController = TextEditingController(text: "192.168.100.209:8080");
 
   void _connect() {
@@ -52,9 +52,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.folder_shared, size: 80, color: Colors.amberAccent),
+              const Icon(Icons.cloud_download, size: 80, color: Colors.amberAccent),
               const SizedBox(height: 20),
-              Text("MANGA READER V22", style: GoogleFonts.bebasNeue(fontSize: 30, letterSpacing: 2)),
+              Text("MANGA READER V23", style: GoogleFonts.bebasNeue(fontSize: 32, letterSpacing: 2)),
               const SizedBox(height: 40),
               TextField(
                 controller: _ipController,
@@ -62,13 +62,14 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 decoration: InputDecoration(
                   filled: true, fillColor: Colors.white10,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                  hintText: "Nhập IP:Port",
                 ),
               ),
               const SizedBox(height: 25),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, minimumSize: const Size(double.infinity, 55)),
                 onPressed: _connect,
-                child: const Text("KẾT NỐI", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text("KẾT NỐI HFS", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -104,8 +105,14 @@ class _FolderBrowserState extends State<FolderBrowser> {
           String href = l.attributes['href'] ?? "";
           String name = l.text.trim();
           
-          if (href.isNotEmpty && href != "/" && !href.startsWith("?") && name.toLowerCase() != "parent directory") {
-            temp.add({'name': name, 'href': href});
+          // Bộ lọc V23: Bỏ qua các link hệ thống và icon của HFS
+          if (href.isNotEmpty && 
+              href != "/" && 
+              !href.startsWith("?") && 
+              !href.contains("sort=") &&
+              name.toLowerCase() != "parent directory" &&
+              !name.contains("[") ) {
+            temp.add({'name': name.isEmpty ? href : name, 'href': href});
           }
         }
         setState(() { _items = temp; _loading = false; });
@@ -118,31 +125,34 @@ class _FolderBrowserState extends State<FolderBrowser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("DANH SÁCH")),
+      appBar: AppBar(title: const Text("DANH SÁCH TRUYỆN")),
       body: _loading 
         ? const Center(child: CircularProgressIndicator()) 
         : _items.isEmpty 
           ? const Center(child: Text("Không thấy file! Kiểm tra lại HFS trên PC."))
-          : ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                String path = _items[index]['href']!;
-                bool isArchive = path.toLowerCase().endsWith(".cbz") || path.toLowerCase().endsWith(".zip");
-                
-                return ListTile(
-                  leading: Icon(isArchive ? Icons.book : Icons.folder, color: Colors.amberAccent),
-                  title: Text(Uri.decodeComponent(_items[index]['name']!)),
-                  onTap: () {
-                    String nextUrl = path.startsWith('http') ? path : widget.baseUrl + path;
-                    // Nếu là folder thì vào tiếp, nếu là file nén thì mở Reader
-                    if (!isArchive && !path.contains(".")) {
-                       Navigator.push(context, MaterialPageRoute(builder: (context) => FolderBrowser(baseUrl: nextUrl.endsWith('/') ? nextUrl : '$nextUrl/')));
-                    } else {
-                       Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderPage(url: nextUrl, isArchive: isArchive)));
-                    }
-                  },
-                );
-              },
+          : RefreshIndicator(
+              onRefresh: _fetch,
+              child: ListView.builder(
+                itemCount: _items.length,
+                itemBuilder: (context, index) {
+                  String path = _items[index]['href']!;
+                  String name = _items[index]['name']!;
+                  bool isArchive = path.toLowerCase().endsWith(".cbz") || path.toLowerCase().endsWith(".zip");
+                  
+                  return ListTile(
+                    leading: Icon(isArchive ? Icons.menu_book : Icons.folder, color: Colors.amberAccent),
+                    title: Text(Uri.decodeComponent(name)),
+                    onTap: () {
+                      String nextUrl = path.startsWith('http') ? path : widget.baseUrl + path;
+                      if (!isArchive && !path.contains(".")) {
+                         Navigator.push(context, MaterialPageRoute(builder: (context) => FolderBrowser(baseUrl: nextUrl.endsWith('/') ? nextUrl : '$nextUrl/')));
+                      } else {
+                         Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderPage(url: nextUrl, isArchive: isArchive)));
+                      }
+                    },
+                  );
+                },
+              ),
             ),
     );
   }
@@ -159,7 +169,10 @@ class ReaderPage extends StatelessWidget {
       final archive = ZipDecoder().decodeBytes(response.bodyBytes);
       List<Uint8List> images = [];
       for (final file in archive) {
-        if (file.isFile && (file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.png'))) {
+        // Chỉ lấy file ảnh bên trong file nén
+        if (file.isFile && (file.name.toLowerCase().endsWith('.jpg') || 
+            file.name.toLowerCase().endsWith('.png') || 
+            file.name.toLowerCase().endsWith('.jpeg'))) {
           images.add(file.content as Uint8List);
         }
       }
@@ -172,12 +185,19 @@ class ReaderPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.transparent),
+      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0),
       body: FutureBuilder<List<Uint8List>>(
         future: _loadImages(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Lỗi đọc ảnh từ file!"));
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [CircularProgressIndicator(), Text("\nĐang giải nén truyện...")],
+            ));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text("Lỗi: Không tìm thấy ảnh trong file!"));
+          }
           return PhotoViewGallery.builder(
             itemCount: snapshot.data!.length,
             builder: (context, index) => PhotoViewGalleryPageOptions(
