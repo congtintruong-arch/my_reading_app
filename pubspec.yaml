@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Manga Direct SMB by Tin.
+description: Manga Direct IP by Tin.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -12,7 +12,7 @@ dependencies:
   cupertino_icons: ^1.0.2
   photo_view: ^0.15.0 
   google_fonts: ^6.1.0
-  smb_kit: ^0.0.1 # Thư viện kết nối trực tiếp ổ cứng Windows
+  http: ^1.1.0 
   path_provider: ^2.1.2
 
 flutter:
