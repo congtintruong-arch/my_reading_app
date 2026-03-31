@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Manga Direct IP by Tin.
+description: Manga WebDAV Direct by Tin.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,7 +13,9 @@ dependencies:
   photo_view: ^0.15.0 
   google_fonts: ^6.1.0
   http: ^1.1.0 
-  path_provider: ^2.1.2
+  html: ^0.15.4
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/icon.png
