@@ -5,17 +5,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
 
-void main() => runApp(const MangaStudioV11());
+void main() => runApp(const MangaStudioV13());
 
-class MangaStudioV11 extends StatelessWidget {
-  const MangaStudioV11({super.key});
+class MangaStudioV13 extends StatelessWidget {
+  const MangaStudioV13({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF0D0D0F),
-        primaryColor: Colors.amberAccent,
+        primaryColor: Colors.deepPurpleAccent,
       ),
       home: const ConnectScreen(),
     );
@@ -31,26 +31,15 @@ class ConnectScreen extends StatefulWidget {
 class _ConnectScreenState extends State<ConnectScreen> {
   final _ipController = TextEditingController(text: "192.168.1.");
 
-  void _connect() async {
-    String url = _ipController.text.trim();
-    if (url.isEmpty) return;
-    if (!url.startsWith('http')) url = 'http://$url';
+  void _connect() {
+    String input = _ipController.text.trim();
+    if (input.isEmpty) return;
+    String url = input.startsWith('http') ? input : 'http://$input';
+    if (!url.endsWith('/')) url += '/';
 
-    // Thử ping server trước khi chuyển màn hình
-    try {
-      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 5));
-      if (response.statusCode == 200) {
-        if (!mounted) return;
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => MangaBrowser(baseUrl: url),
-        ));
-      }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Lỗi kết nối: Hãy kiểm tra IP và Firewall trên PC!\n($e)")),
-      );
-    }
+    Navigator.push(context, MaterialPageRoute(
+      builder: (context) => MangaBrowser(baseUrl: url),
+    ));
   }
 
   @override
@@ -62,28 +51,29 @@ class _ConnectScreenState extends State<ConnectScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.cloud_off_sharp, size: 80, color: Colors.amberAccent),
+              const Icon(Icons.wifi_find, size: 100, color: Colors.deepPurpleAccent),
               const SizedBox(height: 20),
-              Text("MANGA CLOUD V11", style: GoogleFonts.oswald(fontSize: 30, letterSpacing: 2)),
+              Text("MANGA V13", style: GoogleFonts.bebasNeue(fontSize: 40, letterSpacing: 5)),
               const SizedBox(height: 40),
               TextField(
                 controller: _ipController,
                 textAlign: TextAlign.center,
                 decoration: InputDecoration(
-                  hintText: "VD: 192.168.1.15:8080",
+                  hintText: "Nhập IP:Port (Ví dụ: 192.168.1.5:8080)",
                   filled: true,
                   fillColor: Colors.white10,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.amberAccent,
-                  minimumSize: const Size(double.infinity, 55),
+                  backgroundColor: Colors.deepPurpleAccent,
+                  minimumSize: const Size(double.infinity, 60),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
                 onPressed: _connect,
-                child: const Text("KIỂM TRA & KẾT NỐI", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                child: const Text("VÀO THƯ VIỆN", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -101,7 +91,7 @@ class MangaBrowser extends StatefulWidget {
 }
 
 class _MangaBrowserState extends State<MangaBrowser> {
-  List<String> _folders = [];
+  List<Map<String, String>> _folders = [];
   bool _loading = true;
 
   @override
@@ -117,8 +107,8 @@ class _MangaBrowserState extends State<MangaBrowser> {
       var links = doc.querySelectorAll('a');
       setState(() {
         _folders = links
-            .map((l) => l.attributes['href'] ?? "")
-            .where((s) => s.isNotEmpty && s != "/" && !s.contains("?"))
+            .map((l) => {'name': l.text.trim(), 'href': l.attributes['href'] ?? ""})
+            .where((m) => m['href']!.isNotEmpty && m['href'] != "/" && !m['href']!.contains("?"))
             .toList();
         _loading = false;
       });
@@ -130,34 +120,42 @@ class _MangaBrowserState extends State<MangaBrowser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("THƯ MỤC TRUYỆN")),
+      appBar: AppBar(title: const Text("DỰ ÁN MỚI"), backgroundColor: Colors.transparent),
       body: _loading 
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
+              padding: const EdgeInsets.all(15),
               itemCount: _folders.length,
-              itemBuilder: (context, index) => ListTile(
-                leading: const Icon(Icons.folder, color: Colors.amberAccent),
-                title: Text(Uri.decodeComponent(_folders[index])),
-                onTap: () => Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => Reader(baseUrl: widget.baseUrl, folder: _folders[index]),
-                )),
+              itemBuilder: (context, index) => Card(
+                color: Colors.white.withOpacity(0.05),
+                child: ListTile(
+                  leading: const Icon(Icons.menu_book, color: Colors.deepPurpleAccent),
+                  title: Text(_folders[index]['name']!),
+                  onTap: () {
+                    String folderUrl = _folders[index]['href']!;
+                    if (!folderUrl.startsWith('http')) folderUrl = widget.baseUrl + folderUrl;
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => ReaderPage(folderUrl: folderUrl),
+                    ));
+                  },
+                ),
               ),
             ),
     );
   }
 }
 
-class Reader extends StatelessWidget {
-  final String baseUrl, folder;
-  const Reader({super.key, required this.baseUrl, required this.folder});
+class ReaderPage extends StatelessWidget {
+  final String folderUrl;
+  const ReaderPage({super.key, required this.folderUrl});
 
   Future<List<String>> _getImages() async {
-    final response = await http.get(Uri.parse('$baseUrl/$folder'));
+    final response = await http.get(Uri.parse(folderUrl));
     var doc = parse(response.body);
     return doc.querySelectorAll('a')
         .map((l) => l.attributes['href'] ?? "")
-        .where((s) => s.toLowerCase().endsWith('.jpg') || s.toLowerCase().endsWith('.png'))
-        .map((s) => '$baseUrl/$folder$s')
+        .where((s) => s.toLowerCase().endsWith('.jpg') || s.toLowerCase().endsWith('.png') || s.toLowerCase().endsWith('.jpeg'))
+        .map((s) => s.startsWith('http') ? s : (folderUrl.endsWith('/') ? folderUrl + s : '$folderUrl/$s'))
         .toList();
   }
 
@@ -165,7 +163,6 @@ class Reader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text("ĐANG ĐỌC")),
       body: FutureBuilder<List<String>>(
         future: _getImages(),
         builder: (context, snapshot) {

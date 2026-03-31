@@ -1,11 +1,8 @@
 name: my_reading_app
-description: Manga Studio V11 Cloud.
-publish_to: 'none'
+description: Manga Studio Cloud V13.
 version: 1.0.0+1
-
 environment:
   sdk: '>=2.18.0 <4.0.0'
-
 dependencies:
   flutter:
     sdk: flutter
@@ -14,8 +11,5 @@ dependencies:
   google_fonts: ^6.1.0
   http: ^1.1.0 
   html: ^0.15.4
-
 flutter:
   uses-material-design: true
-  assets:
-    - assets/images/icon.png
