@@ -1,5 +1,5 @@
 name: my_reading_app
-description: Manga Cloud V19 - Zip/CBZ Reader.
+description: Manga Cloud V20 - HFS & CBZ Reader.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -14,7 +14,7 @@ dependencies:
   google_fonts: ^6.1.0
   http: ^1.1.0 
   html: ^0.15.4
-  archive: ^3.3.7 # Thư viện để đọc file .zip và .cbz
+  archive: ^3.3.7
 
 flutter:
   uses-material-design: true

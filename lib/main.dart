@@ -4,20 +4,20 @@ import 'package:photo_view/photo_view_gallery.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:html/parser.dart' show parse;
-import 'package:archive/archive.dart'; // Thư viện giải nén
+import 'package:archive/archive.dart';
 import 'dart:typed_data';
 
-void main() => runApp(const MangaStudioV19());
+void main() => runApp(const MangaStudioV20());
 
-class MangaStudioV19 extends StatelessWidget {
-  const MangaStudioV19({super.key});
+class MangaStudioV20 extends StatelessWidget {
+  const MangaStudioV20({super.key});
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF09090B),
-        primaryColor: Colors.greenAccent,
+        primaryColor: Colors.orangeAccent,
       ),
       home: const ConnectScreen(),
     );
@@ -31,6 +31,7 @@ class ConnectScreen extends StatefulWidget {
 }
 
 class _ConnectScreenState extends State<ConnectScreen> {
+  // IP lấy từ hình HFS của Tín
   final _ipController = TextEditingController(text: "192.168.100.209:8080");
 
   void _connect() {
@@ -51,13 +52,28 @@ class _ConnectScreenState extends State<ConnectScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.unarchive, size: 80, color: Colors.greenAccent),
+              const Icon(Icons.cyclone, size: 80, color: Colors.orangeAccent),
               const SizedBox(height: 20),
-              Text("ZIP/CBZ READER V19", style: GoogleFonts.bebasNeue(fontSize: 35)),
+              Text("MANGA V20", style: GoogleFonts.bebasNeue(fontSize: 40, letterSpacing: 5)),
               const SizedBox(height: 40),
-              TextField(controller: _ipController, textAlign: TextAlign.center),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _connect, child: const Text("KẾT NỐI")),
+              TextField(
+                controller: _ipController,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 25),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  minimumSize: const Size(double.infinity, 60),
+                ),
+                onPressed: _connect,
+                child: const Text("KẾT NỐI HFS", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
             ],
           ),
         ),
@@ -100,19 +116,19 @@ class _FolderBrowserState extends State<FolderBrowser> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("KHO TRUYỆN NÉN")),
+      appBar: AppBar(title: const Text("DANH SÁCH")),
       body: _loading ? const Center(child: CircularProgressIndicator()) : ListView.builder(
         itemCount: _items.length,
         itemBuilder: (context, index) {
           String path = _items[index]['href']!.toLowerCase();
-          bool isArchive = path.endsWith(".zip") || path.endsWith(".cbz") || path.endsWith(".cbr");
+          bool isFile = path.endsWith(".cbz") || path.endsWith(".zip") || path.endsWith(".jpg");
           return ListTile(
-            leading: Icon(isArchive ? Icons.compressed_outlined : Icons.folder, color: Colors.greenAccent),
+            leading: Icon(isFile ? Icons.description : Icons.folder, color: Colors.orangeAccent),
             title: Text(Uri.decodeComponent(_items[index]['name']!)),
             onTap: () {
               String fullUrl = widget.baseUrl + _items[index]['href']!;
               Navigator.push(context, MaterialPageRoute(
-                builder: (context) => ReaderPage(url: fullUrl, isArchive: isArchive),
+                builder: (context) => ReaderPage(url: fullUrl, isFile: isFile),
               ));
             },
           );
@@ -124,41 +140,36 @@ class _FolderBrowserState extends State<FolderBrowser> {
 
 class ReaderPage extends StatelessWidget {
   final String url;
-  final bool isArchive;
-  const ReaderPage({super.key, required this.url, required this.isArchive});
+  final bool isFile;
+  const ReaderPage({super.key, required this.url, required this.isFile});
 
   Future<List<Uint8List>> _loadImages() async {
     final response = await http.get(Uri.parse(url));
-    if (isArchive) {
-      // GIẢI NÉN FILE TRỰC TIẾP TRONG RAM
+    if (url.toLowerCase().endsWith(".cbz") || url.toLowerCase().endsWith(".zip")) {
       final archive = ZipDecoder().decodeBytes(response.bodyBytes);
       List<Uint8List> images = [];
       for (final file in archive) {
-        if (file.isFile && (file.name.endsWith('.jpg') || file.name.endsWith('.png'))) {
+        if (file.isFile && (file.name.endsWith('.jpg') || file.name.endsWith('.png') || file.name.endsWith('.jpeg'))) {
           images.add(file.content as Uint8List);
         }
       }
       return images;
-    } else {
-      // Nếu là folder thì xử lý kiểu cũ (tốn thêm bước request từng ảnh)
-      return []; // Tín nên dùng file nén cho bản này nhé
+    } else if (isFile) {
+      return [response.bodyBytes];
     }
+    return [];
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      appBar: AppBar(backgroundColor: Colors.transparent),
       body: FutureBuilder<List<Uint8List>>(
         future: _loadImages(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [CircularProgressIndicator(), Text("\nĐang tải và giải nén...")],
-            ));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Lỗi đọc file nén!"));
+          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Không đọc được file!"));
           return PhotoViewGallery.builder(
             itemCount: snapshot.data!.length,
             builder: (context, index) => PhotoViewGalleryPageOptions(
