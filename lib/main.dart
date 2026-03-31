@@ -18,6 +18,7 @@ class ConnectScreen extends StatefulWidget {
 }
 
 class _ConnectScreenState extends State<ConnectScreen> {
+  // IP lấy từ Log HFS của bạn
   final _controller = TextEditingController(text: "192.168.100.209:8080");
 
   @override
@@ -29,9 +30,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.flash_on, size: 80, color: Colors.amberAccent),
+              const Icon(Icons.bolt, size: 80, color: Colors.amberAccent),
               const SizedBox(height: 20),
-              const Text("MANGA V25 - FIX NAME", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const Text("MANGA STUDIO V25", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 30),
               TextField(controller: _controller, textAlign: TextAlign.center, decoration: const InputDecoration(border: OutlineInputBorder())),
               const SizedBox(height: 20),
@@ -42,7 +43,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   if (!url.endsWith('/')) url += '/';
                   Navigator.push(context, MaterialPageRoute(builder: (context) => FolderBrowser(baseUrl: url)));
                 }, 
-                child: const Text("KẾT NỐI", style: TextStyle(color: Colors.black)),
+                child: const Text("KẾT NỐI", style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -68,10 +69,8 @@ class _FolderBrowserState extends State<FolderBrowser> {
 
   Future<void> _fetch() async {
     try {
-      // Dùng mode=jquery để lấy data thô từ HFS
+      // Dùng ?mode=jquery để lấy data thô, tránh lỗi giao diện Safari hiện mà App không hiện
       final response = await http.get(Uri.parse("${widget.baseUrl}?mode=jquery")).timeout(const Duration(seconds: 10));
-      
-      // Regex cực mạnh để bắt mọi thẻ <a> có đuôi .cbz hoặc .zip
       RegExp regExp = RegExp(r'href="([^"]+)"[^>]*>(.*?)</a>', caseSensitive: false);
       Iterable<Match> matches = regExp.allMatches(response.body);
       
@@ -79,8 +78,6 @@ class _FolderBrowserState extends State<FolderBrowser> {
       for (var m in matches) {
         String href = m.group(1) ?? "";
         String name = m.group(2)?.replaceAll(RegExp(r'<[^>]*>'), '').trim() ?? "";
-        
-        // Chỉ cần là file .cbz hoặc folder là lấy tất
         if (href.isNotEmpty && href != "/" && !href.startsWith("?")) {
            temp.add({'name': name.isEmpty ? href : name, 'href': href});
         }
@@ -96,30 +93,20 @@ class _FolderBrowserState extends State<FolderBrowser> {
       body: _loading 
         ? const Center(child: CircularProgressIndicator()) 
         : _items.isEmpty 
-          ? Center(child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text("Vẫn không thấy?"),
-                const SizedBox(height: 10),
-                const Text("Thử đổi tên file trên HFS thành '1.cbz'"),
-                ElevatedButton(onPressed: _fetch, child: const Text("TẢI LẠI"))
-              ],
-            ))
+          ? const Center(child: Text("HFS Trống! Hãy kiểm tra file trên PC."))
           : ListView.builder(
               itemCount: _items.length,
               itemBuilder: (context, index) {
                 String path = _items[index]['href']!;
-                String name = _items[index]['name']!;
                 bool isArchive = path.toLowerCase().contains(".cbz") || path.toLowerCase().contains(".zip");
-                
                 return ListTile(
                   leading: Icon(isArchive ? Icons.book : Icons.folder, color: Colors.amberAccent),
-                  title: Text(Uri.decodeComponent(name)),
+                  title: Text(Uri.decodeComponent(_items[index]['name']!)),
                   onTap: () {
                     String nextUrl = path.startsWith('http') ? path : widget.baseUrl + path;
                     if (isArchive) {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => ReaderPage(url: nextUrl)));
-                    } else if (!path.contains(".")) {
+                    } else {
                       Navigator.push(context, MaterialPageRoute(builder: (context) => FolderBrowser(baseUrl: nextUrl.endsWith('/') ? nextUrl : '$nextUrl/')));
                     }
                   },
@@ -132,7 +119,7 @@ class _FolderBrowserState extends State<FolderBrowser> {
 
 class ReaderPage extends StatelessWidget {
   final String url;
-  const ReaderPage({super.key});
+  const ReaderPage({super.key, required this.url});
 
   Future<List<Uint8List>> _loadImages() async {
     final response = await http.get(Uri.parse(url));
@@ -143,8 +130,6 @@ class ReaderPage extends StatelessWidget {
         images.add(file.content as Uint8List);
       }
     }
-    // Sắp xếp tên ảnh để đọc đúng thứ tự
-    images.sort((a, b) => a.length.compareTo(b.length)); 
     return images;
   }
 
@@ -159,10 +144,10 @@ class ReaderPage extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [CircularProgressIndicator(), Text("\nĐang mở truyện nặng 1.7GB...")],
+              children: [CircularProgressIndicator(), Text("\nĐang tải file 1.7GB...")],
             ));
           }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Lỗi: Không tìm thấy ảnh!"));
+          if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text("Lỗi giải nén!"));
           return PhotoViewGallery.builder(
             itemCount: snapshot.data!.length,
             builder: (context, index) => PhotoViewGalleryPageOptions(
